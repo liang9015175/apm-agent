@@ -1,12 +1,9 @@
 package com.monitor.apm.monitor;
 
 import com.alibaba.fastjson.JSON;
-import net.bytebuddy.implementation.bind.annotation.Origin;
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bind.annotation.*;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
@@ -30,7 +27,11 @@ public class ApmInterceptor {
         }
     }
     @RuntimeType
-    public static Object intercept(@Origin Method method, @SuperCall Callable<?> callable) throws IOException {
+    public static Object intercept(@This Object instance, @AllArguments Object[] args,  @Origin Method method, @SuperCall Callable<?> callable) throws IOException {
+        System.out.println("this:"+instance.toString());
+        for(Object arg:args){
+            System.out.println("args:"+arg.toString());
+        }
         long start=System.currentTimeMillis();
         String name = method.getName();
 
