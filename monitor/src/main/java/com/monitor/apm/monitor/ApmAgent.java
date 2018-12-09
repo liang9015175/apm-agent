@@ -1,5 +1,6 @@
 package com.monitor.apm.monitor;
 
+import com.monitor.apm.plugin.AbstractPointcut;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
@@ -9,18 +10,12 @@ import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.utility.JavaModule;
 
 import java.lang.instrument.Instrumentation;
-
-import static net.bytebuddy.matcher.ElementMatchers.any;
+import java.util.ServiceLoader;
 
 public class ApmAgent {
 
     public static void premain(String agentArgs, Instrumentation instrumentation){
-        AgentBuilder.Transformer transformer=new AgentBuilder.Transformer() {
-            @Override
-            public DynamicType.Builder<?> transform(DynamicType.Builder<?> builder, TypeDescription typeDescription, ClassLoader classLoader, JavaModule module) {
-                return builder.method(ElementMatchers.<MethodDescription>nameStartsWith("invoke")).intercept(MethodDelegation.to(ApmInterceptor.class));
-            }
-        };
+
         AgentBuilder.Listener listener=new AgentBuilder.Listener() {
             public void onDiscovery(String typeName, ClassLoader classLoader, JavaModule module, boolean loaded) {
                 //System.out.println("discovery...");
@@ -43,15 +38,17 @@ public class ApmAgent {
                 //System.out.println("complete...");
             }
         };
-        new AgentBuilder
-                .Default()
-                .type(ElementMatchers.<TypeDescription>nameStartsWith("org.apache.catalina.core.StandardHostValve"))
-                .transform(transformer)
-                .with(listener)
-                .installOn(instrumentation);
-
-        System.out.println("args:"+agentArgs+"\n");
         setConfigFile(agentArgs);
+        //加载配置
+        ServiceLoader<AbstractPointcut> load = ServiceLoader.load(AbstractPointcut.class);
+        for (AbstractPointcut pointcut:load){
+            new AgentBuilder
+                    .Default()
+                    .type(pointcut.point())
+                    .transform((builder, typeDescription, classLoader, module) -> builder.method(pointcut.method()).intercept(MethodDelegation.to(ApmInterceptor.class)))
+                    .with(listener).installOn(instrumentation);
+        }
+        System.out.println("args:"+agentArgs+"\n");
     }
     private static String logFilePath="";
 

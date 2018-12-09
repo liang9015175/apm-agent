@@ -1,52 +1,22 @@
 package com.monitor.apm.monitor;
 
-import com.alibaba.fastjson.JSON;
+import com.monitor.apm.plugin.AbstractPointcut;
 import net.bytebuddy.implementation.bind.annotation.*;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
-import java.util.Date;
+import java.util.Iterator;
+import java.util.ServiceLoader;
 import java.util.concurrent.Callable;
 
 public class ApmInterceptor {
-    private static RandomAccessFile randomAccessFile=null;
-    static {
-        try {
-            File file=new File(ApmAgent.getConfigFile());
-            if(!file.exists()){
-                file.createNewFile();
-                file.setReadable(true);
-                file.setWritable(true);
-            }
-            randomAccessFile=new RandomAccessFile(file,"rw");
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     @RuntimeType
-    public static Object intercept(@This Object instance, @AllArguments Object[] args,  @Origin Method method, @SuperCall Callable<?> callable) throws IOException {
-        System.out.println("this:"+instance.toString());
-        for(Object arg:args){
-            System.out.println("args:"+arg.toString());
-        }
-        long start=System.currentTimeMillis();
-        String name = method.getName();
-
-        MonitorLog build = MonitorLog.builder().methodName(name).createTime(new Date()).build();
-        try{
-            return callable.call();
-        }catch (Exception e){
-            //记录异常到日志中
-            build.setException(e.getLocalizedMessage());
-            throw new RuntimeException(e);
-        } finally{
-            long timeConsume = System.currentTimeMillis() - start;
-            build.setTimeConsume(timeConsume);
-            System.out.println(JSON.toJSONString(build));
-            randomAccessFile.write((JSON.toJSONString(build,false)+"\n").getBytes());
+    public static void intercept(@This Object instance, @AllArguments Object[] args,  @Origin Method method, @SuperCall Callable<?> callable) throws IOException {
+        ServiceLoader<AbstractPointcut> load = ServiceLoader.load(AbstractPointcut.class);
+        Iterator<AbstractPointcut> iterator = load.iterator();
+        while (iterator.hasNext()){
+            AbstractPointcut next = iterator.next();
+            next.doHandler(instance, method, args, callable);
         }
     }
 }
