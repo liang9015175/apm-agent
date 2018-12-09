@@ -1,6 +1,7 @@
 package com.monitor.apm.plugin;
 
 import com.alibaba.fastjson.JSON;
+import com.monitor.apm.collector.HttpClient;
 import com.monitor.apm.monitor.ApmAgent;
 import com.monitor.apm.monitor.MonitorLog;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 public class MethodPlugin extends AbstractPointcut {
@@ -65,6 +67,7 @@ public class MethodPlugin extends AbstractPointcut {
         if(monitorLog==null){
             log.error("no  any  before monitor log existed");
             monitorLog=MonitorLog.builder().className(instance.getClass().getName()).methodName(method.getName()).endTime(String.valueOf(new Date().getTime())).timeConsume("N/A").startTime("N/A").build();
+            threadLocal.set(monitorLog);
         }else {
             long endTime= new Date().getTime();
             monitorLog.setEndTime(String.valueOf(endTime));
@@ -74,6 +77,11 @@ public class MethodPlugin extends AbstractPointcut {
         }
         System.out.println(JSON.toJSONString(monitorLog));
         randomAccessFile.write((JSON.toJSONString(monitorLog,false)+"\n").getBytes());
+        //发起异步请求，发送日志
+        MonitorLog finalMonitorLog = monitorLog;
+        CompletableFuture.runAsync(()->{
+            HttpClient.post(finalMonitorLog);
+        });
         threadLocal.remove();
     }
 
@@ -91,6 +99,7 @@ public class MethodPlugin extends AbstractPointcut {
         if(monitorLog==null){
             log.error("no  any  before monitor log existed");
             monitorLog=MonitorLog.builder().className(instance.getClass().getName()).methodName(method.getName()).endTime(String.valueOf(new Date().getTime())).timeConsume("N/A").startTime("N/A").timeConsume("N/A").exception(throwable.getLocalizedMessage()).build();
+            threadLocal.set(monitorLog);
         }else {
             monitorLog.setException(throwable.getLocalizedMessage());
         }
