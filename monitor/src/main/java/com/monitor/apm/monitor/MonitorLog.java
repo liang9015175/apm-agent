@@ -16,10 +16,7 @@ public class MonitorLog {
      * 接口耗时
      */
     private String timeConsume;
-    /**
-     * 类名
-     */
-    private String className;
+
     /**
      * 接口名称(方便根据接口维度进行统计)
      */

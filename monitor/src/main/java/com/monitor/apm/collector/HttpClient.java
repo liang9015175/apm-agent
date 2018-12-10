@@ -27,9 +27,9 @@ public class HttpClient {
      * </p>
      * @param monitorLog  监控日志
      */
-    public static void post(MonitorLog monitorLog){
+    public static void post(String monitorLog){
         OkHttpClient client = new OkHttpClient();
-        RequestBody requestBody=RequestBody.create(MediaType.parse("application/json;charset=utf-8"), JSON.toJSONString(monitorLog));
+        RequestBody requestBody=RequestBody.create(MediaType.parse("application/json;charset=utf-8"), monitorLog);
         Request request=new Request.Builder().url(url).post(requestBody).build();
         Call call = client.newCall(request);
         call.enqueue(new Callback() {

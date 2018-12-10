@@ -21,6 +21,7 @@ public class UserController {
         try{
             Thread.sleep(randomSleep);
             if(randomSleep>100&&randomSleep<200){
+                //模拟接口发生异常
                 throw new RuntimeException("mock exception");
             }
             return new UserDto(){
@@ -30,7 +31,7 @@ public class UserController {
                 }
             };
         } catch (Exception e) {
-            //throw exception ,so that we can catch it in out proxy
+            //throw exception ,so that we can catch it in our proxy
             throw new RuntimeException(e.getLocalizedMessage());
         }
     }

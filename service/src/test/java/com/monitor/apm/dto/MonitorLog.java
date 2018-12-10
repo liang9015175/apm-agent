@@ -1,4 +1,4 @@
-package com.monitor.apm.console.controller;
+package com.monitor.apm.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

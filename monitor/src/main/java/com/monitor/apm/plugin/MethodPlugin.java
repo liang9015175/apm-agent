@@ -8,11 +8,14 @@ import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
+import org.apache.tomcat.jni.Local;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 
@@ -30,7 +33,7 @@ public class MethodPlugin extends AbstractPointcut {
                 file.setReadable(true);
                 file.setWritable(true);
             }
-            randomAccessFile=new RandomAccessFile("./monitor.log","rw");
+            randomAccessFile=new RandomAccessFile(file,"rw");
             System.out.println(randomAccessFile);
         } catch (IOException e) {
             e.printStackTrace();
@@ -55,18 +58,18 @@ public class MethodPlugin extends AbstractPointcut {
      */
     @Override
     public void before(Object instance, Method method, Object[] params) {
-        log.info("start before interceptor for class:{},method:{}",instance.getClass(),method.getName());
-        MonitorLog build = MonitorLog.builder().startTime(String.valueOf(new Date().getTime())).methodName(method.getName()).className(instance.getClass().getName()).build();
+        log.debug("start before interceptor for class:{},method:{}",instance.getClass(),method.getName());
+        MonitorLog build = MonitorLog.builder().startTime(String.valueOf(new Date().getTime())).methodName(method.getName()).build();
         threadLocal.set(build);
     }
 
     @Override
     public void after(Object instance, Method method, Object[] params, Object result) throws IOException {
-        log.info("start after interceptor for class:{},method:{}",instance.getClass(),method.getName());
+        log.debug("start after interceptor for class:{},method:{}",instance.getClass(),method.getName());
         MonitorLog monitorLog = threadLocal.get();
         if(monitorLog==null){
             log.error("no  any  before monitor log existed");
-            monitorLog=MonitorLog.builder().className(instance.getClass().getName()).methodName(method.getName()).endTime(String.valueOf(new Date().getTime())).timeConsume("N/A").startTime("N/A").build();
+            monitorLog=MonitorLog.builder().methodName(method.getName()).endTime(String.valueOf(new Date().getTime())).timeConsume("N/A").startTime("N/A").build();
             threadLocal.set(monitorLog);
         }else {
             long endTime= new Date().getTime();
@@ -75,13 +78,15 @@ public class MethodPlugin extends AbstractPointcut {
             long timeConsume=endTime-Long.valueOf(startTime);//计算方法耗时
             monitorLog.setTimeConsume(String.valueOf(timeConsume));
         }
-        System.out.println(JSON.toJSONString(monitorLog));
-        randomAccessFile.write((JSON.toJSONString(monitorLog,false)+"\n").getBytes());
-        //发起异步请求，发送日志
-        MonitorLog finalMonitorLog = monitorLog;
-        CompletableFuture.runAsync(()->{
-            HttpClient.post(finalMonitorLog);
-        });
+        String format = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        randomAccessFile.write((format+"-"+JSON.toJSONString(monitorLog,false)+"\r\n").getBytes());
+        if(!ApmAgent.getTest()){
+            //发起异步请求，发送日志
+            MonitorLog finalMonitorLog = monitorLog;
+            CompletableFuture.runAsync(()->{
+                HttpClient.post(format+"-"+JSON.toJSONString(finalMonitorLog,false));
+            });
+        }
         threadLocal.remove();
     }
 
@@ -94,11 +99,11 @@ public class MethodPlugin extends AbstractPointcut {
      */
     @Override
     public void handleThrow(Object instance, Method method, Object[] params, Throwable throwable) {
-        log.info("start throw interceptor for class:{},method:{}",instance.getClass(),method.getName());
+        log.debug("start throw interceptor for class:{},method:{}",instance.getClass(),method.getName());
         MonitorLog monitorLog = threadLocal.get();
         if(monitorLog==null){
             log.error("no  any  before monitor log existed");
-            monitorLog=MonitorLog.builder().className(instance.getClass().getName()).methodName(method.getName()).endTime(String.valueOf(new Date().getTime())).timeConsume("N/A").startTime("N/A").timeConsume("N/A").exception(throwable.getLocalizedMessage()).build();
+            monitorLog=MonitorLog.builder().methodName(method.getName()).endTime(String.valueOf(new Date().getTime())).timeConsume("N/A").startTime("N/A").timeConsume("N/A").exception(throwable.getLocalizedMessage()).build();
             threadLocal.set(monitorLog);
         }else {
             monitorLog.setException(throwable.getLocalizedMessage());

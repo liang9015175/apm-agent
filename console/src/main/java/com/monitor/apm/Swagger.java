@@ -1,4 +1,4 @@
-package com.monitor.apm.service;
+package com.monitor.apm;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,14 +19,14 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
  **/
 @Configuration
 @EnableSwagger2
-public class Swagger2 {
+public class Swagger {
     @Bean
-    public Docket createRestApi() {
+    public Docket createRestApi2() {
         return new Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(apiInfo())
                 .select()
                 //为当前包路径
-                .apis(RequestHandlerSelectors.basePackage("com.monitor.apm.service"))
+                .apis(RequestHandlerSelectors.basePackage("com.monitor.apm"))
                 .paths(PathSelectors.any())
                 .build();
     }
