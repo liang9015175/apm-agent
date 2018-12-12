@@ -11,5 +11,11 @@
         <module name="service" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="console" target="8" />
+      <module name="monitor" target="8" />
+      <module name="monitor-apm" target="1.7" />
+      <module name="service" target="8" />
+    </bytecodeTargetLevel>
   </component>
 </project>
